@@ -1,26 +1,20 @@
 import ipaddress
 
-# Fixed Data Structures
-TELCOS = ["CELCOM", "DIGI", "REDTONE", "TIME", "TM", "UM", "WEBE", "YTL"]
-SERVICES = {
-    "RTP": [
-        "202.122.147.160/27",
-        "202.122.147.192/27",
-        "202.122.147.224/27"
-    ],
-    "SIGTRAN": [
-        "202.122.147.113/32",
-        "202.122.147.114/32",
-        "202.122.147.115/32",
-        "202.122.147.116/32"
-    ],
-    "SIP": [
-        "202.122.147.140/29",
-        "202.122.147.148/29",
-        "202.122.147.156/29"
-    ]
-}
+# Mapping Areas (Telcos) to simple identifiers
+AREAS = ["A", "B", "C", "D", "E", "F", "G", "H"]
 
+# Type Data keyed by VPN Instance with the requested IP placeholders
+TYPE_DATA = {
+    "AA": {
+        "ips": ["11.11.11.160/27", "11.11.11.192/27", "11.11.11.224/27"]
+    },
+    "BB": {
+        "ips": ["22.22.22.113/32", "22.22.22.114/32", "22.22.22.115/32", "22.22.22.116/32"]
+    },
+    "CC": {
+        "ips": ["33.33.33.140/29", "33.33.33.148/29", "33.33.33.156/29"]
+    }
+}
 
 def get_in_ips():
     print("\n--- Enter Remote (IN) IPs ---")
@@ -39,34 +33,35 @@ def get_in_ips():
                 print("Invalid format. Use 'IP Mask' (e.g., 1.1.1.0 24)")
     return ips
 
-
 def main():
-    # 1. Selection
-    print("\nSelect Telco:")
-    for i, t in enumerate(TELCOS, 1): print(f"{i}. {t}")
-    selected_telco = TELCOS[int(input("Choice #: ")) - 1]
+    # 1. Selection: Area and VPN Instance
+    print("\nSelect Area:")
+    for i, a in enumerate(AREAS, 1): print(f"{i}. Area {a}")
+    selected_area = AREAS[int(input("Choice #: ")) - 1]
 
-    service_list = list(SERVICES.keys())
-    print("\nSelect Service:")
-    for i, s in enumerate(service_list, 1): print(f"{i}. {s}")
-    selected_service = service_list[int(input("Choice #: ")) - 1]
+    vpn_list = list(TYPE_DATA.keys())
+    print("\nSelect VPN Instance:")
+    for i, v in enumerate(vpn_list, 1): print(f"{i}. {v}")
+    selected_vpn = vpn_list[int(input("Choice #: ")) - 1]
+    
+    out_ips = TYPE_DATA[selected_vpn]["ips"]
 
     # 2. Index Requirements
     print("\n--- Indexing Configuration ---")
     idx_out_start = int(input("Start index for Prefix-OUT: "))
     rule_start = int(input("Start index for ACL Rules: "))
 
-    # 3. IP Data
+    # 3. Input Remote IPs
     in_ips = get_in_ips()
-    out_ips = SERVICES[selected_service]
 
-    prefix_name_in = f"{selected_telco}_{selected_service}_IN"
-    prefix_name_out = f"{selected_telco}_{selected_service}_OUT"
-    acl_name = f"{selected_telco}_{selected_service}_EF"
+    # Build VRP Names
+    prefix_name_in = f"{selected_area}_{selected_vpn}_IN"
+    prefix_name_out = f"{selected_area}_{selected_vpn}_OUT"
+    acl_name = f"{selected_area}_{selected_vpn}_EF"
 
-    print("\n" + "=" * 60)
-    print(f" FINAL CONFIGURATION: {selected_telco} {selected_service}")
-    print("=" * 60)
+    print("\n" + "=" * 75)
+    print(f" FINAL CONFIG: Area {selected_area} | VPN {selected_vpn}")
+    print("=" * 75)
 
     # SECTION 1: IP-PREFIX IN
     print("\n# [SECTION 1: IP-PREFIX IN]")
@@ -89,18 +84,14 @@ def main():
     print(f"acl name {acl_name} advance")
     curr_rule = rule_start
     for in_ip_str in in_ips:
-        # Use IPv4Interface to keep the specific IP address provided
         in_iface = ipaddress.IPv4Interface(in_ip_str)
         for out_ip_str in out_ips:
             out_iface = ipaddress.IPv4Interface(out_ip_str)
-
-            # Print the specific IP instead of the network address
             print(f" rule {curr_rule} permit ip source {in_iface.ip} {in_iface.network.hostmask} "
                   f"destination {out_iface.ip} {out_iface.network.hostmask}")
             curr_rule += 5
 
-    print("\n" + "=" * 60)
-
+    print("\n" + "=" * 75)
 
 if __name__ == "__main__":
     main()
